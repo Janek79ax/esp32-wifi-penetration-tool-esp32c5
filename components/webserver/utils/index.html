@@ -1,46 +1,120 @@
+
 <!DOCTYPE html>
 <html>
 <head>
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>ESP32 Management AP</title>
+    <meta charset="utf-8">
+    <title>ESP32C5 W4RR10R v1.0r</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body {
-            width: fit-content;
+            background-color: #121212;
+            color: #00ff88;
+            font-family: "Fira Code", "Courier New", monospace;
+            padding: 20px;
+            margin: 0;
         }
-        table, tr, th {
-            border: 1px solid;
+
+        h1, h2, legend {
+            color: #00ff88;
+            border-bottom: 1px solid #00ff88;
+            padding-bottom: 5px;
+        }
+
+        section {
+            margin-bottom: 30px;
+        }
+
+        table {
             border-collapse: collapse;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        th, td {
+            border: 1px solid #00ff88;
+            padding: 10px;
             text-align: center;
         }
-        th, td {
-            padding:10px;
+
+        tr:hover {
+            background-color: #1e1e1e;
         }
-        tr:hover, tr.selected {
-            background-color: lightblue;
-            cursor:pointer;
+
+        tr.selected {
+            background-color: #004422;
+        }
+
+        fieldset {
+            border: 1px solid #00ff88;
+            padding: 15px;
+            margin-top: 10px;
+            background-color: #1a1a1a;
+        }
+
+        select, input[type="number"], button {
+            background-color: #222;
+            color: #00ff88;
+            border: 1px solid #00ff88;
+            padding: 5px 10px;
+            font-family: inherit;
+            font-size: 1em;
+            margin-top: 5px;
+        }
+
+        select:disabled, input:disabled {
+            opacity: 0.5;
+        }
+
+        button:hover {
+            background-color: #00ff88;
+            color: #121212;
+            cursor: pointer;
+        }
+
+        #errors {
+            color: #ff4f4f;
+            background-color: #1a0000;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ff4f4f;
+        }
+
+        #loading {
+            font-style: italic;
+        }
+
+        #running-progress {
+            font-weight: bold;
+        }
+
+        img.header-image {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            margin: 0 auto 20px;
+            border: none;
         }
     </style>
 </head>
-<body onLoad="getStatus()">
-    <h1>ESP32C5 PenTool v0.1</h1>
-    <p style="margin-top: -10px; font-size: 0.9em; color: gray;">Labolatorium Edit</p>
+<body onload="getStatus()">
+    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAMAAACahl6sAAAC4lBMVEVHcEwADg4bI0MJnp5FVIwP9/cQ/f0AAAEMECAP9PQQ/v4Q//8PFSoCAwUABgYP+vpBREQQ//8AAQEAAQEP+fk9SnwAAAAAAwMQ//8Q//8P8fEQ//8ACQkACwsAAQESGjoQ/v4CJiYIChYQ//8ACwsAAwMAAACpqqqRk5MQ//8Q//8Q//8nMFEXHTEADAwQ//8Q/PwQ//8BBQUuOWIQ//8CKiseKlk0QG4Q//8Q//8Q//8Q/v4N1tYO4eEEQ0MO5+cP8/MKpqYP7OwBNzcJnp4HZmYIhoYHcHATnZ0DLCwNubkLo6P/Xv8AAAD///9IXl4Q//8gLi4S//9HX18AAQFHXV0DBQUYJCQmNjYhMDBRaWkECAkkNDQaJiZTQUEfLS0bKCgF//8dKiooODgJDAwLEBAjMjJLYmJKYGBOZmY7Tk5FW1sB//8qOzxTbGwNExNNZGQuPz8WISEV//8THBxJWlo2SUkeKysyRERCV1cVHh4PFxdVOzs/U1NNUVBRR0cK//9XcXFNTExGY2MTGBhLVVWFiYnX3NsyNDQ5PT1RZmb7/f3n6+rGyMjE2tr19/fv8fFadnYntbULtbUS7+8BEhIIdnYU4OApKioR6OgIgYEMwsIymJgnN3INy8sa2dkJlpZefHxrbW1VVFQyQoI9eXkDNjY5hoYO9fQuoqHe4+M8TIsCJCQkwMA1jo4gyck/c3MN1dVYWloKoaFdY2NZMDCfoaHO0NAjJSUc0tGvxcRJWpcU+PgjMGYCLS0GWloL+/sbGxsKjIzL5eXV7+8KqqoHbGxDaWlQXFwsrKvd9/YEPT1PYKAHT0+40dBkZ2YM3d0GY2NTZqmttbW5uro+bW18f35xdXU7gIACGxtdSEiVmZkERERphYXr/v6YqqgESUlOc3IPAABLaWlZbLQyy8sfCgpfISE+pKRKMjIf4uJBNTVJj49EmJhHJSU8ubkq4OAXNjYx4eE54+MABENHcEyC4mZ5AAAA9nRSTlMAQf0E/ho3/f0JJ0P9+GRR/vPY8F79tpHp0xB3UX7N/rsV/ZUwp8P9/vqzxPz8JYxspOb8gQv+/azL359BeW+WzZGwrTGylY/Iwp22/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////v///////////////////////////////////////////////////////////////////wBq3B1PAAAxxUlEQVR42uyZ208bZxrGE4fGTtek27CQ3S45oQSpWpKVghLa7W5u9vrVjM14xjPjIzY+jT0+AbbBDjaHG98ZY6fgmFDhkkRAS8pygYBQRQohCkiAFKkgLpImabNt0/0X9huOTqHbOzSs/F6YGcHF9/PzvIfv5dChQhSiEIUoRCEKUYhCFKIQhfh/jPOnKktgPUrKTp0/sBjlZQDDazMzzxZm00trKSg7fCAxzpXB/Qf3lHjUiPf88Grk7ufeerhw5QDKcTnVr/QrjcaJm486W1tb2+IxxkueOHCinISFHr8Sd0481ekGbFYMq1Vx1oTNB6cOEsWRS6dXHiqVyqjzZniAf2G1emI8xmEYx8SCZOWlgwNyvHitx48jjturjMPHkiRLOWKMQIIlbC0l5QfHVrNKJa40fj26qmoAYM1mEsBni6lUCIXnAwfEXkcqYUyJ47izx74aATBxHrvdymkAQgmrIIonEYQLB4HjdCqzbquJf61qoJ5LMFabzcokQmbQ8IIoKizhIMrED1JJLCI9nMbHX/3IgoWPcchPGKbiYkwA2EiC4VQqVSIkfk1OQtKPG51ffvbvDmgIxQQzYesonCcW6QAfl7BzGIfcJfI8OQX9fpQdP41/B/WOGM8JTsI88XicYWwcH2syA9UZm0PFywTHRV13YdYfdY4MfMf6HPx667DZGU/IEfR6HTbGqorxQcPwp3ycsyV8IOIqXA6DiOP1+LcUJ3RAlTXOWENNLjqg1xsofRBjsFqev9072Mlz8ecpEOu4cuQ8pLpx55uf3Q6UCBxmZ7BIk5pqqa93t1AKtUVrCHriqsaBN8lnOj701c3hYpEO9peKIaN0vv7ZbRNKlZ0JBS0+N7txHQGivkFv0QY43lYbfr64EObbfkpCyTkxcly5DGm/s2vcp0I5buVDXrrBTEB+uAO0tomxt+v4xWe6F7ruXjhxRIQgZTDsN95a/dSBOBhPUB/ogF3hs2g1KqZd97zPO6C7aVyBf4qxgUBf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"ESP32 Logo" class="header-image">
+    <h1>ESP32C5_W4RR10R</h1>
+    <p style="margin-top: -10px; font-size: 0.9em; color: rgb(243, 103, 3);">Labolatorium Edition v1.0</p>
     <section id="errors"></section>
     <section id="loading">Loading... Please wait</section>
     <section id="ready" style="display: none;">
-        <h2>Attack configuration</h2>
-        <form onSubmit="runAttack(); return false;">
+        <h2>/W4R Plan/</h2>
+        <form onsubmit="runAttack(); return false;">
             <fieldset>
                 <legend>Select target</legend>
                 <table id="ap-list"></table>
-                <p>
-                    <button type="button" onClick="refreshAps()">Refresh</button>
-                </p>
+                <p><button type="button" onclick="refreshAps()">Refresh</button></p>
             </fieldset>
             <fieldset>
                 <legend>Attack configuration</legend>
                 <p>
                     <label for="attack_type">Attack type:</label>
-                    <select id="attack_type" onChange="updateConfigurableFields(this)" required>
+                    <select id="attack_type" onchange="updateConfigurableFields(this)" required>
                         <option value="0" title="This type is not implemented yet." disabled>ATTACK_TYPE_PASSIVE</option>
                         <option value="1">ATTACK_TYPE_HANDSHAKE</option>
                         <option value="2" selected>ATTACK_TYPE_PMKID</option>
@@ -55,11 +129,9 @@
                 </p>
                 <p>
                     <label for="attack_timeout">Attack timeout (seconds):</label>
-                    <input type="number" min="0" max="255" id="attack_timeout" value="" required/>
+                    <input type="number" min="0" max="255" id="attack_timeout" value="" required>
                 </p>
-                <p>
-                    <button>Attack</button>
-                </p>
+                <p><button>Attack</button></p>
             </fieldset>
         </form>
     </section>
@@ -69,335 +141,281 @@
     <section id="result" style="display: none;">
         <div id="result-meta">Loading result.. Please wait</div>
         <div id="result-content"></div>
-        <button type="button" onClick="resetAttack()">New attack</button>
+        <button type="button" onclick="resetAttack()">New attack</button>
     </section>
     <script>
-        var AttackStateEnum = { READY: 0, RUNNING: 1, FINISHED: 2, TIMEOUT: 3};
-        var AttackTypeEnum = { ATTACK_TYPE_PASSIVE: 0, ATTACK_TYPE_HANDSHAKE: 1, ATTACK_TYPE_PMKID: 2, ATTACK_TYPE_DOS: 3};
-        //var selectedApElement = -1;
-        var selectedApElements = [];
-        var poll;
-        var poll_interval = 1000;
-        var running_poll;
-        var running_poll_interval = 1000;
-        var attack_timeout = 0;
-        var time_elapsed = 0;
-        var defaultResultContent = document.getElementById("result").innerHTML;
-        var defaultAttackMethods = document.getElementById("attack_method").outerHTML;
-        function getStatus() {
-            var oReq = new XMLHttpRequest();
-            oReq.onload = function () {
-                var arrayBuffer = oReq.response;
-                if (arrayBuffer) {
-                    var attack_state = parseInt(new Uint8Array(arrayBuffer, 0, 1));
-                    var attack_type = parseInt(new Uint8Array(arrayBuffer, 1, 1));
-                    var attack_content_size = parseInt(new Uint16Array(arrayBuffer, 2, 1));
-                    var attack_content = new Uint8Array(arrayBuffer, 4);
-                    console.log("attack_state=" + attack_state + "; attack_type=" + attack_type + "; attack_count_size=" + attack_content_size);
-                    var status = "ERROR: Cannot parse attack state.";
-                    hideAllSections();
-                    switch(attack_state) {
-                        case AttackStateEnum.READY:
-                            showAttackConfig();
-                            break;
-                        case AttackStateEnum.RUNNING:
-                            showRunning();
-                            console.log("Poll");
-                            setTimeout(getStatus, poll_interval);
-                            break;
-                        case AttackStateEnum.FINISHED:
-                            showResult("FINISHED", attack_type, attack_content_size, attack_content);
-                            break;
-                        case AttackStateEnum.TIMEOUT:
-                            showResult("TIMEOUT", attack_type, attack_content_size, attack_content);
-                            break;
-                        default:
-                            document.getElementById("errors").innerHTML = "Error loading attack status! Unknown state.";
-                    }
-                    return;
-
+    var AttackStateEnum = { READY: 0, RUNNING: 1, FINISHED: 2, TIMEOUT: 3};
+    var AttackTypeEnum = { ATTACK_TYPE_PASSIVE: 0, ATTACK_TYPE_HANDSHAKE: 1, ATTACK_TYPE_PMKID: 2, ATTACK_TYPE_DOS: 3};
+    var selectedApElement = -1;
+    var poll;
+    var poll_interval = 1000;
+    var running_poll;
+    var running_poll_interval = 1000;
+    var attack_timeout = 0;
+    var time_elapsed = 0;
+    var defaultResultContent = document.getElementById("result").innerHTML;
+    var defaultAttackMethods = document.getElementById("attack_method").outerHTML;
+    function getStatus() {
+        var oReq = new XMLHttpRequest();
+        oReq.onload = function() {
+            var arrayBuffer = oReq.response;
+            if(arrayBuffer) {
+                var attack_state = parseInt(new Uint8Array(arrayBuffer, 0, 1));
+                var attack_type = parseInt(new Uint8Array(arrayBuffer, 1, 1));
+                var attack_content_size = parseInt(new Uint16Array(arrayBuffer, 2, 1));
+                var attack_content = new Uint8Array(arrayBuffer, 4);
+                console.log("attack_state=" + attack_state + "; attack_type=" + attack_type + "; attack_count_size=" + attack_content_size);
+                var status = "ERROR: Cannot parse attack state.";
+                hideAllSections();
+                switch(attack_state) {
+                    case AttackStateEnum.READY:
+                        showAttackConfig();
+                        break;
+                    case AttackStateEnum.RUNNING:
+                        showRunning();
+                        console.log("Poll");
+                        setTimeout(getStatus, poll_interval);
+                        break;
+                    case AttackStateEnum.FINISHED:
+                        showResult("FINISHED", attack_type, attack_content_size, attack_content);
+                        break;
+                    case AttackStateEnum.TIMEOUT:
+                        showResult("TIMEOUT", attack_type, attack_content_size, attack_content);
+                        break;
+                    default:
+                        document.getElementById("errors").innerHTML = "Error loading attack status! Unknown state.";
                 }
-            };
-            oReq.onerror = function() {
-                console.log("Request error");
-                document.getElementById("errors").innerHTML = "Cannot reach ESP32. Check that you are connected to management AP. You might get disconnected during attack.";
-                getStatus();
-            };
-            oReq.ontimeout = function() {
-                console.log("Request timeout");
-                getStatus();
-            };
-            oReq.open("GET", "http://192.168.4.1/status", true);
-            oReq.responseType = "arraybuffer";
-            oReq.send();
-        }
-        function hideAllSections(){
-            for (let section of document.getElementsByTagName("section")){
-                section.style.display = "none";
-            };
-        }
-        function showRunning(){
-            hideAllSections();
-            document.getElementById("running").style.display = "block";
-        }
-        function countProgress(){
-            if(time_elapsed >= attack_timeout){
-                document.getElementById("errors").innerHTML = "Please reconnect to management AP";
-                document.getElementById("errors").style.display = "block";
-                clearInterval(running_poll);
-            }
-            document.getElementById("running-progress").innerHTML = time_elapsed + "/" + attack_timeout + "s";
-            time_elapsed++;
-        }
-        function showAttackConfig(){
-            document.getElementById("ready").style.display = "block";
-            refreshAps();
-        }
-        function showResult(status, attack_type, attack_content_size, attack_content){
-            hideAllSections();
-            clearInterval(poll);
-            document.getElementById("result").innerHTML = defaultResultContent;
-            document.getElementById("result").style.display = "block";
-            document.getElementById("result-meta").innerHTML = status + "<br>";
-            type = "ERROR: Cannot parse attack type.";
-            switch(attack_type){
-                case AttackTypeEnum.ATTACK_TYPE_PASSIVE:
-                    type = "ATTACK_TYPE_PASSIVE";
-                    break;
-                case AttackTypeEnum.ATTACK_TYPE_HANDSHAKE:
-                    type = "ATTACK_TYPE_HANDSHAKE";
-                    resultHandshake(attack_content, attack_content_size);
-                    break;
-                case AttackTypeEnum.ATTACK_TYPE_PMKID:
-                    type = "ATTACK_TYPE_PMKID";
-                    resultPmkid(attack_content, attack_content_size);
-                    break;
-                case AttackTypeEnum.ATTACK_TYPE_DOS:
-                    type = "ATTACK_TYPE_DOS";
-                    break;
-                default:
-                    type = "UNKNOWN";
-            }
-            document.getElementById("result-meta").innerHTML += type + "<br>";
-        }
-        function refreshAps() {
-            document.getElementById("ap-list").innerHTML = "Loading (this may take a while)...";
-            var oReq = new XMLHttpRequest();
-            oReq.onload = function() {
-                document.getElementById("ap-list").innerHTML = "<th>SSID</th><th>BSSID</th><th>RSSI</th>";
-                var arrayBuffer = oReq.response;
-                if(arrayBuffer) {
-                    var byteArray = new Uint8Array(arrayBuffer);
-                    for  (let i = 0; i < byteArray.byteLength; i = i + 40) {
-                        var tr = document.createElement('tr');
-                        tr.setAttribute("id", i / 40);
-                        tr.setAttribute("onClick", "selectAp(this)");
-                        var td_ssid = document.createElement('td');
-                        var td_rssi = document.createElement('td');
-                        var td_bssid = document.createElement('td');
-                        td_ssid.innerHTML = new TextDecoder("utf-8").decode(byteArray.subarray(i + 0, i + 32));
-                        tr.appendChild(td_ssid);
-                        for(let j = 0; j < 6; j++){
-                            td_bssid.innerHTML += uint8ToHex(byteArray[i + 33 + j]) + ":";
-                        }
-                        tr.appendChild(td_bssid);
-                        td_rssi.innerHTML = byteArray[i + 39] - 255;
-                        tr.appendChild(td_rssi);
-                        document.getElementById("ap-list").appendChild(tr);
-                    }
-                }
-            };
-            oReq.onerror = function (){
-                document.getElementById("ap-list").innerHTML = "ERROR";
-            };
-            oReq.open("GET", "http://192.168.4.1/ap-list", true);
-            oReq.responseType = "arraybuffer";
-            oReq.send();
-        }
-
-        // function selectAp(el) {
-        //     console.log(el.id);
-        //     if(selectedApElement != -1){
-        //         selectedApElement.classList.remove("selected")
-        //     }
-        //     selectedApElement=el;
-        //     el.classList.add("selected");
-        // }
-
-        function selectAp(el) {
-            console.log(el.id);
-
-            if (selectedApElements.includes(el)) {
-                selectedApElements = selectedApElements.filter(item => item !== el);
-                el.classList.remove("selected");
-            } else {
-                selectedApElements.push(el);
-                el.classList.add("selected");
-            }
-        }
-        function runAttack() {
-            //if(selectedApElement == -1){
-            if (selectedApElements.length === 0) {
-                console.log("No AP selected. Attack not started.");
-                document.getElementById("errors").innerHTML = "No AP selected. Attack not started.";
                 return;
+                
             }
-            hideAllSections();
-            document.getElementById("running").style.display = "block";
-
-            // var arrayBuffer = new ArrayBuffer(4);
-            // var uint8Array = new Uint8Array(arrayBuffer);
-            // uint8Array[0] = parseInt(selectedApElement.id);
-            // uint8Array[1] = parseInt(document.getElementById("attack_type").value);
-            // uint8Array[2] = parseInt(document.getElementById("attack_method").value);
-            // uint8Array[3] = parseInt(document.getElementById("attack_timeout").value);
-            // var oReq = new XMLHttpRequest();
-            // oReq.open("POST", "http://192.168.4.1/run-attack", true);
-            // oReq.send(arrayBuffer);
-
-            var ids = Array.from(selectedApElements).map(el => parseInt(el.id));            
-            var originalLength = ids.length; 
-            
-            //up to 3 IDs
-            while (ids.length < 3) {
-                ids.push(0);
-            }
-
-            //TODO add on click alert if user tries to highlight more
-
-            var arrayBuffer = new ArrayBuffer(4 + ids.length); // 4 bajty na parametry + miejsce na AP IDs
-            var uint8Array = new Uint8Array(arrayBuffer);
-
-            uint8Array[0] = parseInt(document.getElementById("attack_type").value);
-            uint8Array[1] = parseInt(document.getElementById("attack_method").value);
-            uint8Array[2] = parseInt(document.getElementById("attack_timeout").value);
-            uint8Array[3] = originalLength; 
-
-            ids.forEach((id, index) => {
-                uint8Array[4 + index] = id;
-            });
-
-            let requestData = {
-                attack_type: uint8Array[0],
-                attack_method: uint8Array[1],
-                attack_timeout: uint8Array[2],
-                ap_count: uint8Array[3],
-                ap_ids: Array.from(uint8Array.slice(4, 4 + uint8Array[3]))
-            };
-
-            console.log("===== Attack Request Data =====");
-            console.table(requestData);
-            console.log("Raw uint8Array:", uint8Array);
-
-            var oReq = new XMLHttpRequest();
-            oReq.open("POST", "http://192.168.4.1/run-attack", true);
-            oReq.send(arrayBuffer);
+        };
+        oReq.onerror = function() {
+            console.log("Request error");
+            document.getElementById("errors").innerHTML = "Cannot reach ESP32. Check that you are connected to management AP. You might get disconnected during attack.";
             getStatus();
-            attack_timeout = parseInt(document.getElementById("attack_timeout").value);
-            time_elapsed = 0;
-            running_poll = setInterval(countProgress, running_poll_interval);
+        };
+        oReq.ontimeout = function() {
+            console.log("Request timeout");
+            getStatus();  
+        };
+        oReq.open("GET", "http://192.168.4.1/status", true);
+        oReq.responseType = "arraybuffer";
+        oReq.send();
+    }
+    function hideAllSections(){
+        for(let section of document.getElementsByTagName("section")){
+            section.style.display = "none";
+        };
+    }
+    function showRunning(){
+        hideAllSections();
+        document.getElementById("running").style.display = "block";
+    }
+    function countProgress(){
+        if(time_elapsed >= attack_timeout){
+            document.getElementById("errors").innerHTML = "Please reconnect to management AP";
+            document.getElementById("errors").style.display = "block";
+            clearInterval(running_poll);
         }
-        function resetAttack(){
-            hideAllSections();
-            showAttackConfig();
-            var oReq = new XMLHttpRequest();
-            oReq.open("HEAD", "http://192.168.4.1/reset", true);
-            oReq.send();
+        document.getElementById("running-progress").innerHTML = time_elapsed + "/" + attack_timeout + "s";
+        time_elapsed++;
+    }
+    function showAttackConfig(){
+        document.getElementById("ready").style.display = "block";
+        refreshAps();
+    }
+    function showResult(status, attack_type, attack_content_size, attack_content){
+        hideAllSections();
+        clearInterval(poll);
+        document.getElementById("result").innerHTML = defaultResultContent;
+        document.getElementById("result").style.display = "block";
+        document.getElementById("result-meta").innerHTML = status + "<br>";
+        type = "ERROR: Cannot parse attack type.";
+        switch(attack_type) {
+            case AttackTypeEnum.ATTACK_TYPE_PASSIVE:
+                type = "ATTACK_TYPE_PASSIVE";
+                break;
+            case AttackTypeEnum.ATTACK_TYPE_HANDSHAKE:
+                type = "ATTACK_TYPE_HANDSHAKE";
+                resultHandshake(attack_content, attack_content_size);
+                break;
+            case AttackTypeEnum.ATTACK_TYPE_PMKID:
+                type = "ATTACK_TYPE_PMKID";
+                resultPmkid(attack_content, attack_content_size);
+                break;
+            case AttackTypeEnum.ATTACK_TYPE_DOS:
+                type = "ATTACK_TYPE_DOS";
+                break;
+            default:
+                type = "UNKNOWN";
         }
-        function resultPmkid(attack_content, attack_content_size){
-            var mac_ap = "";
-            var mac_sta = "";
-            var ssid = "";
-            var ssid_text = "";
-            var pmkid = "";
-            var index = 0;
-            for(let i = 0; i < 6; i = i + 1) {
-                mac_ap += uint8ToHex(attack_content[index + i]);
-            }
-            index = index + 6;
-            for(let i = 0; i < 6; i = i + 1) {
-                mac_sta += uint8ToHex(attack_content[index + i]);
-            }
-            index = index + 6;
-            for(let i = 0; i < attack_content[index]; i = i + 1) {
-                ssid += uint8ToHex(attack_content[index + 1 + i]);
-                ssid_text += String.fromCharCode(attack_content[index + 1 + i]);
-            }
-            index = index + attack_content[index] + 1;
-            var pmkid_cnt = 0;
-            for(let i = 0; i < attack_content_size - index; i = i + 1) {
-                if((i % 16) == 0){
-                    pmkid += "<br>";
-                    pmkid += "</code>PMKID #" + pmkid_cnt + ": <code>";
-                    pmkid_cnt += 1;
+        document.getElementById("result-meta").innerHTML += type + "<br>";
+    }
+    function refreshAps() {
+        document.getElementById("ap-list").innerHTML = "Loading (this may take a while)...";
+        var oReq = new XMLHttpRequest();
+        oReq.onload = function() {
+            document.getElementById("ap-list").innerHTML = "<th>SSID</th><th>BSSID</th><th>RSSI</th>";
+            var arrayBuffer = oReq.response;
+            if(arrayBuffer) {
+                var byteArray = new Uint8Array(arrayBuffer);
+                for  (let i = 0; i < byteArray.byteLength; i = i + 40) {
+                    var tr = document.createElement('tr');
+                    tr.setAttribute("id", i / 40);
+                    tr.setAttribute("onClick", "selectAp(this)");
+                    var td_ssid = document.createElement('td');
+                    var td_rssi = document.createElement('td');
+                    var td_bssid = document.createElement('td');
+                    td_ssid.innerHTML = new TextDecoder("utf-8").decode(byteArray.subarray(i + 0, i + 32));
+                    tr.appendChild(td_ssid);
+                    for(let j = 0; j < 6; j++){
+                        td_bssid.innerHTML += uint8ToHex(byteArray[i + 33 + j]) + ":";
+                    }
+                    tr.appendChild(td_bssid);
+                    td_rssi.innerHTML = byteArray[i + 39] - 255;
+                    tr.appendChild(td_rssi);
+                    document.getElementById("ap-list").appendChild(tr);
                 }
-                pmkid += uint8ToHex(attack_content[index + i]);
             }
-            document.getElementById("result-content").innerHTML = "";
-            document.getElementById("result-content").innerHTML += "MAC AP: <code>" + mac_ap + "</code><br>";
-            document.getElementById("result-content").innerHTML += "MAC STA: <code>" + mac_sta + "</code><br>";
-            document.getElementById("result-content").innerHTML += "(E)SSID: <code>" + ssid + "</code> (" + ssid_text + ")";
-            document.getElementById("result-content").innerHTML += "<code>" + pmkid + "</code><br>";
-            document.getElementById("result-content").innerHTML += "<br>Hashcat ready format:"
-            document.getElementById("result-content").innerHTML += "<code>" + pmkid + "*" + mac_ap + "*" + mac_sta + "*" + ssid + "</code><br>";
+        };
+        oReq.onerror = function() {
+            document.getElementById("ap-list").innerHTML = "ERROR";
+        };
+        oReq.open("GET", "http://192.168.4.1/ap-list", true);
+        oReq.responseType = "arraybuffer";
+        oReq.send();
+    }
+    function selectAp(el) {
+        console.log(el.id);
+        if(selectedApElement != -1){
+            selectedApElement.classList.remove("selected")
         }
-        function resultHandshake(attack_content, attack_content_size){
-            document.getElementById("result-content").innerHTML = "";
-            var pcap_link = document.createElement("a");
-            pcap_link.setAttribute("href", "capture.pcap");
-            pcap_link.text = "Download PCAP file";
-            var hccapx_link = document.createElement("a");
-            hccapx_link.setAttribute("href", "capture.hccapx");
-            hccapx_link.text = "Download HCCAPX file";
-            document.getElementById("result-content").innerHTML += "<p>" + pcap_link.outerHTML + "</p>";
-            document.getElementById("result-content").innerHTML += "<p>" + hccapx_link.outerHTML + "</p>";
-            var handshakes = "";
-            for(let i = 0; i < attack_content_size; i = i + 1) {
-                handshakes += uint8ToHex(attack_content[i]);
-                if(i % 50 == 49) {
-                    handshakes += "\n";
-                }
+        selectedApElement=el;
+        el.classList.add("selected");
+    }
+    function runAttack() {
+        if(selectedApElement == -1){
+            console.log("No AP selected. Attack not started.");
+            document.getElementById("errors").innerHTML = "No AP selected. Attack not started.";
+            return;
+        }
+        hideAllSections();
+        document.getElementById("running").style.display = "block";
+        var arrayBuffer = new ArrayBuffer(4);
+        var uint8Array = new Uint8Array(arrayBuffer);
+        uint8Array[0] = parseInt(selectedApElement.id);
+        uint8Array[1] = parseInt(document.getElementById("attack_type").value);
+        uint8Array[2] = parseInt(document.getElementById("attack_method").value);
+        uint8Array[3] = parseInt(document.getElementById("attack_timeout").value);
+        var oReq = new XMLHttpRequest();
+        oReq.open("POST", "http://192.168.4.1/run-attack", true);
+        oReq.send(arrayBuffer);
+        getStatus();
+        attack_timeout = parseInt(document.getElementById("attack_timeout").value);
+        time_elapsed = 0;
+        running_poll = setInterval(countProgress, running_poll_interval);
+    }
+    function resetAttack(){
+        hideAllSections();
+        showAttackConfig();
+        var oReq = new XMLHttpRequest();
+        oReq.open("HEAD", "http://192.168.4.1/reset", true);
+        oReq.send();
+    }
+    function resultPmkid(attack_content, attack_content_size){
+        var mac_ap = "";
+        var mac_sta = "";
+        var ssid = "";
+        var ssid_text = "";
+        var pmkid = "";
+        var index = 0;
+        for(let i = 0; i < 6; i = i + 1) {
+            mac_ap += uint8ToHex(attack_content[index + i]);
+        }
+        index = index + 6;
+        for(let i = 0; i < 6; i = i + 1) {
+            mac_sta += uint8ToHex(attack_content[index + i]);
+        }
+        index = index + 6;
+        for(let i = 0; i < attack_content[index]; i = i + 1) {
+            ssid += uint8ToHex(attack_content[index + 1 + i]);
+            ssid_text += String.fromCharCode(attack_content[index + 1 + i]);
+        }
+        index = index + attack_content[index] + 1;
+        var pmkid_cnt = 0;
+        for(let i = 0; i < attack_content_size - index; i = i + 1) {
+            if((i % 16) == 0){
+                pmkid += "<br>";
+                pmkid += "</code>PMKID #" + pmkid_cnt + ": <code>";
+                pmkid_cnt += 1;
             }
-            document.getElementById("result-content").innerHTML += "<pre><code>" + handshakes + "</code></pre>";
+            pmkid += uint8ToHex(attack_content[index + i]);
         }
-        function uint8ToHex(uint8){
-            return ("00" + uint8.toString(16)).slice(-2);
-        }
-        function updateConfigurableFields(el){
-            document.getElementById("attack_method").outerHTML = defaultAttackMethods;
-            switch(parseInt(el.value)){
-                case AttackTypeEnum.ATTACK_TYPE_PASSIVE:
-                    console.log("PASSIVE configuration");
-                    break;
-                case AttackTypeEnum.ATTACK_TYPE_HANDSHAKE:
-                    console.log("HANDSHAKE configuration");
-                    document.getElementById("attack_timeout").value = 60;
-                    setAttackMethods(["DEAUTH_ROGUE_AP (PASSIVE)", "DEAUTH_BROADCAST (ACTIVE)", "CAPTURE_ONLY (PASSIVE)"]);
-                    break;
-                case AttackTypeEnum.ATTACK_TYPE_PMKID:
-                    console.log("PMKID configuration");
-                    document.getElementById("attack_timeout").value = 5;
-                    break;
-                case AttackTypeEnum.ATTACK_TYPE_DOS:
-                    console.log("DOS configuration");
-                    document.getElementById("attack_timeout").value = 120;
-                    setAttackMethods(["DEAUTH_ROGUE_AP (PASSIVE)", "DEAUTH_BROADCAST (ACTIVE)", "DEAUTH_COMBINE_ALL"]);
-                    break;
-                default:
-                    console.log("Unknown attack type");
-                    break;
+        document.getElementById("result-content").innerHTML = "";
+        document.getElementById("result-content").innerHTML += "MAC AP: <code>" + mac_ap + "</code><br>";
+        document.getElementById("result-content").innerHTML += "MAC STA: <code>" + mac_sta + "</code><br>";
+        document.getElementById("result-content").innerHTML += "(E)SSID: <code>" + ssid + "</code> (" + ssid_text + ")";
+        document.getElementById("result-content").innerHTML += "<code>" + pmkid + "</code><br>";
+        document.getElementById("result-content").innerHTML += "<br>Hashcat ready format:"
+        document.getElementById("result-content").innerHTML += "<code>" + pmkid + "*" + mac_ap + "*" + mac_sta  + "*" + ssid  + "</code><br>";
+    }
+    function resultHandshake(attack_content, attack_content_size){
+        document.getElementById("result-content").innerHTML = "";
+        var pcap_link = document.createElement("a");
+        pcap_link.setAttribute("href", "capture.pcap");
+        pcap_link.text = "Download PCAP file";
+        var hccapx_link = document.createElement("a");
+        hccapx_link.setAttribute("href", "capture.hccapx");
+        hccapx_link.text = "Download HCCAPX file";
+        document.getElementById("result-content").innerHTML += "<p>" + pcap_link.outerHTML + "</p>";
+        document.getElementById("result-content").innerHTML += "<p>" + hccapx_link.outerHTML + "</p>";
+        var handshakes = "";
+        for(let i = 0; i < attack_content_size; i = i + 1) {
+            handshakes += uint8ToHex(attack_content[i]);
+            if(i % 50 == 49) {
+                handshakes += "\n";
             }
         }
-        function setAttackMethods(attackMethodsArray){
-            document.getElementById("attack_method").removeAttribute("disabled");
-            attackMethodsArray.forEach(function(method, index){
-                let option = document.createElement("option");
-                option.value = index;
-                option.text = method;
-                option.selected = true;
-                document.getElementById("attack_method").appendChild(option);
-            });
+        document.getElementById("result-content").innerHTML += "<pre><code>" + handshakes + "</code></pre>";
+    }
+    function uint8ToHex(uint8){
+        return ("00" + uint8.toString(16)).slice(-2);
+    }
+    function updateConfigurableFields(el){
+        document.getElementById("attack_method").outerHTML = defaultAttackMethods;
+        switch(parseInt(el.value)){
+            case AttackTypeEnum.ATTACK_TYPE_PASSIVE:
+                console.log("PASSIVE configuration");
+                break;
+            case AttackTypeEnum.ATTACK_TYPE_HANDSHAKE:
+                console.log("HANDSHAKE configuration");
+                document.getElementById("attack_timeout").value = 60;
+                setAttackMethods(["DEAUTH_ROGUE_AP (PASSIVE)", "DEAUTH_BROADCAST (ACTIVE)", "CAPTURE_ONLY (PASSIVE)"]);
+                break;
+            case AttackTypeEnum.ATTACK_TYPE_PMKID:
+                console.log("PMKID configuration");
+                document.getElementById("attack_timeout").value = 5;
+                break;
+            case AttackTypeEnum.ATTACK_TYPE_DOS:
+                console.log("DOS configuration");
+                document.getElementById("attack_timeout").value = 120;
+                setAttackMethods(["DEAUTH_ROGUE_AP (PASSIVE)", "DEAUTH_BROADCAST (ACTIVE)", "DEAUTH_COMBINE_ALL"]);
+                break;
+            default:
+                console.log("Unknown attack type");
+                break;
         }
+    }
+    function setAttackMethods(attackMethodsArray){
+        document.getElementById("attack_method").removeAttribute("disabled");
+        attackMethodsArray.forEach(function(method, index){
+            let option = document.createElement("option");
+            option.value = index;
+            option.text = method;
+            option.selected = true;
+            document.getElementById("attack_method").appendChild(option);
+        });
+    }
     </script>
 </body>
 </html>
