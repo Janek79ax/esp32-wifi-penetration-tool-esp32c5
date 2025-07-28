@@ -119,30 +119,43 @@ static httpd_uri_t uri_ap_list_get = {
  */
 static esp_err_t uri_run_attack_post_handler(httpd_req_t *req) {
 
+    // Receive data from HTTP request
+    char buffer[128];
+    int recv_size = httpd_req_recv(req, buffer, sizeof(buffer));
+
     // Dynamic memory allocation
-    attack_request_t *attack_request_deb = heap_caps_malloc(sizeof(attack_request_t), MALLOC_CAP_SPIRAM);
+    attack_request_t *attack_request_deb = heap_caps_malloc(recv_size, MALLOC_CAP_SPIRAM);
     if (attack_request_deb == NULL) {
         ESP_LOGE(TAG, "Failed to allocate memory for attack_request_deb!");
         return ESP_FAIL;
     }
 
-    // Receive data from HTTP request
-    char buffer[128];
-    int recv_size = httpd_req_recv(req, buffer, sizeof(buffer));
+
     
-    ESP_LOGI(TAG, "recv_size: %d", recv_size);
+    ESP_LOGI(TAG, "Actually received size: %d", recv_size);
+    ESP_LOGI(TAG, "Size of attack_request_t: %zu", sizeof(attack_request_t));
+    
     if (recv_size > 0) {
         ESP_LOG_BUFFER_HEX(TAG, buffer, recv_size);
-        memcpy(attack_request_deb, buffer, sizeof(attack_request_t)); // Copy data to allocated memory
+        memcpy(attack_request_deb, buffer, recv_size); // Copy data to allocated memory
     } else {
         ESP_LOGE(TAG, "Failed to receive data");
         free(attack_request_deb);  // Free memory if something goes wrong
         return ESP_FAIL;
     }
 
+    // Log the contents of attack_request_deb
+    ESP_LOGI(TAG, "1)Logging attack_request_deb contents:");
+    ESP_LOG_BUFFER_HEX(TAG, attack_request_deb, recv_size);
+
+    // Log specific fields: ap_ids and evil_ap_name
+    ESP_LOGI(TAG, "2)attack_request_deb->ap_ids: %s", attack_request_deb->ap_ids);
+    ESP_LOGI(TAG, "3)attack_request_deb->evil_ap_name: %s", attack_request_deb->evil_ap_name);
+
+
     // Sent a new event with an allocated structure:
     esp_err_t res = httpd_resp_send(req, NULL, 0);
-    ESP_ERROR_CHECK(esp_event_post(WEBSERVER_EVENTS, WEBSERVER_EVENT_ATTACK_REQUEST, attack_request_deb, sizeof(attack_request_t), portMAX_DELAY));
+    ESP_ERROR_CHECK(esp_event_post(WEBSERVER_EVENTS, WEBSERVER_EVENT_ATTACK_REQUEST, attack_request_deb, recv_size, portMAX_DELAY));
 
     return res;
 }

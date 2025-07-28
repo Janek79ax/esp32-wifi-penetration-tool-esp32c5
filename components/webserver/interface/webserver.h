@@ -26,8 +26,9 @@ typedef struct {
     uint8_t type;           //< Chosen type of attack
     uint8_t method;         //< Chosen method of attack
     uint8_t timeout;        //< Attack timeout in seconds
-    uint8_t num_aps;       //< Liczba wybranych AP
-    uint8_t ap_ids[10];  //< Statyczna tablica AP IDs (zawsze 10 elementów)  
+    uint8_t num_aps;       //< Number of selected IPa
+    uint8_t ap_ids[10];    //< Static IDs array (always 10 elems)  
+    uint8_t evil_ap_name[32]; //< 32-byte string for the name of the evil AP
 } attack_request_t;
 
 /**

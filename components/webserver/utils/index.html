@@ -121,11 +121,35 @@
                 <p>
                     <label for="attack_method">Attack method:</label>
                     <select id="attack_method" required>
-                        <option value="1" selected>DEAUTH_BROADCAST (ACTIVE)</option>
+                        <option value="1" selected>DEAUTH BROADCAST</option>
+                        <option value="2">DEAUTH + EVIL TWIN</option>
                         <option value="3">WPA3 CLIENT OVERFLOW</option>
                         <option value="4">WPA3 DRAGON DRAIN</option>
                     </select>
                 </p>
+                <p id="ap-selection" style="display: none;">
+                    <label for="evil_ap">Select Evil Twin AP:</label>
+                    <select id="evil_ap"></select>
+                </p>
+                <script>
+                    document.getElementById("attack_method").addEventListener("change", function() {
+                        const apSelection = document.getElementById("ap-selection");
+                        if (this.value == "2") {
+                            apSelection.style.display = "block";
+                            const targetApSelect = document.getElementById("evil_ap");
+                            targetApSelect.innerHTML = ""; // Clear existing options
+
+                            apData.forEach((ap, index) => {
+                                const option = document.createElement("option");
+                                option.value = ap.ssid;
+                                option.textContent = `${ap.ssid}`;
+                                targetApSelect.appendChild(option);
+                            });
+                        } else {
+                            apSelection.style.display = "none";
+                        }
+                    });
+                </script>
                 <p>
                     <label for="attack_timeout">This attack has no timeout. You can close browser and disconnect from the Management Access Point. If you wish to stop the attack, please reset your board.</label>
                     <input type="hidden" min="0" max="255" id="attack_timeout" value="120" required>
@@ -144,6 +168,7 @@
         <button type="button" onclick="resetAttack()">New attack</button>
     </section>
     <script>
+    var apData = [];
     var AttackStateEnum = { READY: 0, RUNNING: 1, FINISHED: 2, TIMEOUT: 3};
     var AttackTypeEnum = { ATTACK_TYPE_PASSIVE: 0, ATTACK_TYPE_HANDSHAKE: 1, ATTACK_TYPE_PMKID: 2, ATTACK_TYPE_DOS: 3};
     var selectedApElements = [];
@@ -251,10 +276,14 @@
         }
         document.getElementById("result-meta").innerHTML += type + "<br>";
     }
+    function addApData(ssid) {
+        apData.push({ ssid: ssid});
+    }
     function refreshAps() {
         document.getElementById("ap-list").innerHTML = "Loading (this may take a while)...";
         var oReq = new XMLHttpRequest();
         oReq.onload = function() {
+            apData = [];
             document.getElementById("ap-list").innerHTML = "<th>SSID</th><th>BSSID</th><th>RSSI</th>";
             var arrayBuffer = oReq.response;
             if(arrayBuffer) {
@@ -266,15 +295,19 @@
                     var td_ssid = document.createElement('td');
                     var td_rssi = document.createElement('td');
                     var td_bssid = document.createElement('td');
-                    td_ssid.innerHTML = new TextDecoder("utf-8").decode(byteArray.subarray(i + 0, i + 32));
+                    let decodedSSID = new TextDecoder("utf-8").decode(byteArray.subarray(i + 0, i + 32));
+                    addApData(decodedSSID);
+                    td_ssid.innerHTML = decodedSSID;
                     tr.appendChild(td_ssid);
                     for(let j = 0; j < 6; j++){
-                        td_bssid.innerHTML += uint8ToHex(byteArray[i + 33 + j]) + ":";
+                        let decodedBSSID = uint8ToHex(byteArray[i + 33 + j]);
+                        td_bssid.innerHTML += decodedBSSID+(j<5?":":"");
                     }
                     tr.appendChild(td_bssid);
                     td_rssi.innerHTML = byteArray[i + 39] - 255;
                     tr.appendChild(td_rssi);
                     document.getElementById("ap-list").appendChild(tr);
+                    
                 }
             }
         };
@@ -334,28 +367,23 @@
             ids.push(0);
         }
 
-        var arrayBuffer = new ArrayBuffer(4 + ids.length); // 4 bajty na parametry + miejsce na AP IDs
+        var arrayBuffer = new ArrayBuffer(4 + ids.length + 32); // 4 bytes for parameters + AP IDs + 32 bytes for evilAP name
         var uint8Array = new Uint8Array(arrayBuffer);
 
         uint8Array[0] = parseInt(document.getElementById("attack_type").value);
         uint8Array[1] = parseInt(document.getElementById("attack_method").value);
         uint8Array[2] = parseInt(document.getElementById("attack_timeout").value);
-        uint8Array[3] = originalLength; 
+        uint8Array[3] = originalLength;
 
         ids.forEach((id, index) => {
             uint8Array[4 + index] = id;
         });
 
-        let requestData = {
-            attack_type: uint8Array[0],
-            attack_method: uint8Array[1],
-            attack_timeout: uint8Array[2],
-            ap_count: uint8Array[3],
-            ap_ids: Array.from(uint8Array.slice(4, 4 + uint8Array[10]))
-        };
+        let evilApName = document.getElementById("evil_ap").value || "";
+        for (let i = 0; i < evilApName.length && i < 32; i++) {
+            uint8Array[4 + ids.length + i] = evilApName.charCodeAt(i);
+        }
 
-        console.log("===== Attack Request Data =====");
-        console.table(requestData);
         console.log("Raw uint8Array:", uint8Array);
 
         var oReq = new XMLHttpRequest();

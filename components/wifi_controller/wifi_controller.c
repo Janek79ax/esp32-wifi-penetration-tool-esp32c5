@@ -11,6 +11,7 @@
 #include "esp_netif.h"
 #include "esp_event.h"
 
+
 static const char* TAG = "wifi_controller";
 /**
  * @brief Stores current state of Wi-Fi interface
@@ -18,9 +19,8 @@ static const char* TAG = "wifi_controller";
 static bool wifi_init = false;
 static uint8_t original_mac_ap[6];
 
-static void wifi_event_handler(void *event_handler_arg, esp_event_base_t event_base, int32_t event_id, void *event_data){
 
-}
+
 
 /**
  * @brief Initializes Wi-Fi interface into APSTA mode and starts it.
@@ -31,7 +31,8 @@ static void wifi_init_apsta(){
     ESP_ERROR_CHECK(esp_netif_init());
 
     esp_netif_create_default_wifi_ap();
-    esp_netif_create_default_wifi_sta();
+    //Do I really need it upfront?
+    //esp_netif_create_default_wifi_sta();
 
     wifi_init_config_t wifi_init_config = WIFI_INIT_CONFIG_DEFAULT();
 
@@ -39,7 +40,6 @@ static void wifi_init_apsta(){
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
 
-    //ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL));
 
     // save original AP MAC address
     ESP_ERROR_CHECK(esp_wifi_get_mac(WIFI_IF_AP, original_mac_ap));

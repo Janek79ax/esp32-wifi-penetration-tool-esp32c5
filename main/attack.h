@@ -49,6 +49,12 @@ typedef struct {
     uint8_t timeout;
     wifi_ap_record_t ap_records[10];
     uint16_t actualAmount;
+    /**
+     * @brief Evil AP name, used for Evil Twin attack.
+     * 
+     * This is 32-byte string that will be used as SSID of Evil AP.
+     */
+    char evil_ap_name[32];
 } attack_config_t;
 
 

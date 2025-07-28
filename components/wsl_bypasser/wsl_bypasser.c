@@ -29,6 +29,8 @@
 #include "mbedtls/entropy.h"
 #include "esp_timer.h"
 
+#include "../../main/global.h"
+
 static const char *TAG = "wsl_bypasser";
 /**
  * @brief Deauthentication frame template
@@ -401,7 +403,19 @@ void wsl_bypasser_send_deauth_frame_multiple_aps(wifi_ap_record_t *ap_records, s
 
     if (ap_records == NULL || count == 0)
     {
-        ESP_LOGI(TAG, "ERROR: Tablica ap_records jest pusta!");
+        ESP_LOGW(TAG, "ERROR: ap_records is empty!");
+        return;
+    }
+
+    if (applicationState == EVIL_TWIN_PASS_CHECK )   
+    {
+        ESP_LOGD(TAG, "Deauth stop requested in Evil Twin flow, checking for password..");
+        return;
+    }
+
+    if (applicationState == IDLE)   
+    {
+        ESP_LOGD(TAG, "Application in IDLE state after obtaining password %s, stopping deauth.", evilTwinVerifiedPassword);
         return;
     }
 
@@ -413,7 +427,7 @@ void wsl_bypasser_send_deauth_frame_multiple_aps(wifi_ap_record_t *ap_records, s
 
         if (ap_record == NULL)
         {
-            ESP_LOGI(TAG, "ERROR: Empty element");
+            ESP_LOGW(TAG, "ERROR: Empty element");
             return;
         }
 
@@ -423,10 +437,10 @@ void wsl_bypasser_send_deauth_frame_multiple_aps(wifi_ap_record_t *ap_records, s
         globalData[i] = strdup((char *)ap_record->ssid);
 
 
-        ESP_LOGI(TAG, "Preparations to send deauth frame...");
-        ESP_LOGI(TAG, "Target SSID: %s", ap_record->ssid);
-        ESP_LOGI(TAG, "Target CHANNEL: %d", ap_record->primary);
-        ESP_LOGI(TAG, "Target BSSID: %02X:%02X:%02X:%02X:%02X:%02X",
+        ESP_LOGW(TAG, "Preparations to send deauth frame...");
+        ESP_LOGW(TAG, "Target SSID: %s", ap_record->ssid);
+        ESP_LOGW(TAG, "Target CHANNEL: %d", ap_record->primary);
+        ESP_LOGW(TAG, "Target BSSID: %02X:%02X:%02X:%02X:%02X:%02X",
                  ap_record->bssid[0], ap_record->bssid[1], ap_record->bssid[2],
                  ap_record->bssid[3], ap_record->bssid[4], ap_record->bssid[5]);
       
@@ -452,11 +466,12 @@ void wsl_bypasser_send_deauth_frame_multiple_aps(wifi_ap_record_t *ap_records, s
             start_time = esp_timer_get_time(); 
         }
 
-        vTaskDelay(pdMS_TO_TICKS(10));
+        vTaskDelay(pdMS_TO_TICKS(20));
     }
 
     //taskEXIT_CRITICAL(&dataMutex);
-
+    //temp 4 debug:
+    vTaskDelay(pdMS_TO_TICKS(2000));
 }
 
 void wsl_bypasser_send_deauth_frame(const wifi_ap_record_t *ap_record)

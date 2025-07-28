@@ -43,9 +43,9 @@ static void timer_send_deauth_frame_multiple_aps(void *arg){
         return;
     }
 
-    ESP_LOGI(TAG, "APs list (%zu):", wifiApList->count);
+    ESP_LOGD(TAG, "APs list (%zu):", wifiApList->count);
     for (size_t i = 0; i < wifiApList->count; i++) {
-        ESP_LOGI(TAG, "AP %zu: SSID: %s, channel: %d", 
+        ESP_LOGD(TAG, "AP %zu: SSID: %s, channel: %d", 
                  i + 1, 
                  (char*) wifiApList->ap_records[i].ssid, 
                  wifiApList->ap_records[i].primary);  
@@ -61,7 +61,7 @@ void resetWifi(int channel) {
     ESP_LOGD(TAG, "Stopping AP...");
 
     wifi_country_t wifi_country = {
-        .cc = "ZA",
+        .cc = "PH",
         .schan = 1,
         .nchan = 14,
         .policy = WIFI_COUNTRY_POLICY_AUTO,
@@ -75,12 +75,13 @@ void resetWifi(int channel) {
 
     wifi_config_t wifi_config = {
         .ap = {
-            .channel = channel,
+            .channel = 161/*channel*/,
             .max_connection = 0
         },
     };
     ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config));
-    esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+    if (channel>0)
+        esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
     ESP_LOGD(TAG, "AP re-set");
 }
 
@@ -121,7 +122,8 @@ void attack_method_broadcast_multiple_ap(const wifi_ap_record_t ap_recordss[], s
     memcpy(ap_list->ap_records, ap_recordss, count * sizeof(wifi_ap_record_t));
     ap_list->count = count;
 
-    resetWifi(1);
+    //just reset, ,no channel selection yet!
+    resetWifi(0);
 
 
     const esp_timer_create_args_t deauth_timer_args = {
@@ -131,6 +133,26 @@ void attack_method_broadcast_multiple_ap(const wifi_ap_record_t ap_recordss[], s
 
     ESP_ERROR_CHECK(esp_timer_create(&deauth_timer_args, &deauth_timer_handle));
     ESP_ERROR_CHECK(esp_timer_start_periodic(deauth_timer_handle, period_sec * 10000));
+}
+
+//TODO ET start timer responsible for asking Slave if user already provided password. 
+void start_password_check_timer(unsigned period_sec) {
+    ESP_LOGI(TAG, "Starting password check timer with period: %u seconds", period_sec);
+
+    void password_check_callback(void *arg) {
+        ESP_LOGI(TAG, "Checking if user provided password...");
+        // Add logic to check if the user has provided the password
+    }
+
+    const esp_timer_create_args_t password_check_timer_args = {
+        .callback = &password_check_callback,
+        .arg = NULL,
+        .name = "password_check_timer"
+    };
+
+    esp_timer_handle_t password_check_timer_handle;
+    ESP_ERROR_CHECK(esp_timer_create(&password_check_timer_args, &password_check_timer_handle));
+    ESP_ERROR_CHECK(esp_timer_start_periodic(password_check_timer_handle, period_sec * 1000000));
 }
 
 

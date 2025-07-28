@@ -25,7 +25,7 @@
 
 static const char *TAG = "main:attack_handshake";
 static attack_handshake_methods_t method = -1;
-static const wifi_ap_record_t *ap_record = NULL;
+static wifi_ap_record_t *ap_record = NULL;
 
 /**
  * @brief Callback for DATA_FRAME_EVENT_EAPOLKEY_FRAME event.

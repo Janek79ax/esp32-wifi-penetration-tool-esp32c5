@@ -160,10 +160,32 @@ static void attack_request_handler(void *args, esp_event_base_t event_base, int3
 
     ESP_LOGI(TAG, "Starting attack...");
 
+    ESP_LOGI(TAG, "Raw Event Data:");
+    ESP_LOG_BUFFER_HEX(TAG, event_data, sizeof(attack_request_t));
+
+
     attack_request_t *attack_request = (attack_request_t *) event_data;
+   
+    ESP_LOGI("ATTACK_REQ", "Received attack request:");
+    ESP_LOGI("ATTACK_REQ", "Type: %u", attack_request->type);
+    ESP_LOGI("ATTACK_REQ", "Method: %u", attack_request->method);
+    ESP_LOGI("ATTACK_REQ", "Timeout: %u sec", attack_request->timeout);
+    ESP_LOGI("ATTACK_REQ", "Number of selected APs: %u", attack_request->num_aps);
+    char ap_ids_str[64] = {0};
+    char *ptr = ap_ids_str;
+    for (int i = 0; i < attack_request->num_aps && i < 10; i++) {
+        ptr += snprintf(ptr, sizeof(ap_ids_str) - (ptr - ap_ids_str), "%u ", attack_request->ap_ids[i]);
+    }
+    ESP_LOGI("ATTACK_REQ", "AP IDs: %s", ap_ids_str);
+    ESP_LOGI("ATTACK_REQ", "Evil AP Name: \"%.*s\"", 32, attack_request->evil_ap_name);
 
     attack_config_t attack_config = { .type = attack_request->type, .method = attack_request->method, .timeout = attack_request->timeout };
     attack_config.actualAmount = attack_request->num_aps;
+    attack_config.evil_ap_name[0] = '\0'; // Initialize evil_ap_name to empty string
+    if (attack_request->evil_ap_name[0] != '\0') {
+        strncpy(attack_config.evil_ap_name, (char *) attack_request->evil_ap_name, sizeof(attack_config.evil_ap_name) - 1);
+        attack_config.evil_ap_name[sizeof(attack_config.evil_ap_name) - 1] = '\0'; // Ensure null termination
+    }
 
     vTaskDelay(pdMS_TO_TICKS(500));
 
