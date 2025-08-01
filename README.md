@@ -4,6 +4,8 @@ Based on https://github.com/risinek/esp32-wifi-penetration-tool
 
 It also provides experimental attacks against the WPA3 routers based on SAE Commit frame. These are based on Mathy Vanhoef work: https://github.com/vanhoefm/dragondrain-and-time
 
+On top of deauthentication, it provides Evil Twin attack with password verification.
+
 Simple attack info is displayed on connected STA7789 1.9" TFT SPI display. Screen connection details:
 
 Screen -> ESP32C5
@@ -30,6 +32,27 @@ BLK -> 13
  - Up to 10 APs can be attacked with channel switching, just select them on the web page
  - Deauth frame has been fixed so now Active DOS attack works
  - On the other hand, passive and mixed attack mode and handshake and PMKID attacks have been disabled 
+
+# Evil Twin
+This attack requires second board, classical ESP32 flashed with https://github.com/Janek79ax/BW16-ESP32-Evil-Twin/tree/main/EvilTwin_slave
+
+Connection details:
+ESP32C5 - ESP32
+ - 5V - VIN
+ - GND - GND
+ - 26 - D21
+ - 25 - D22
+
+This second board could be connected to SPI 0.96 OLED display as follows:
+OLED - ESP32:
+ - GND - GND
+ - VCC - 3V3
+ - D0 - D18
+ - D1 - D23
+ - RES - D16
+ - DC - D17
+ - CS - D5
+This provides ability to read obtained password on the screen. 
 
 # WPA 3 Features
 
